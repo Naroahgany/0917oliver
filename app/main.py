@@ -35,15 +35,25 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 app = FastAPI(limit="50M")
 
 # --------------- CORS 中间件 ---------------
-# 如果 ALLOWED_ORIGINS 为空列表，则不允许任何跨域请求
-if settings.ALLOWED_ORIGINS:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.ALLOWED_ORIGINS,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+# KINGFALL MODE: 终极注入式、正则化CORS配置
+# 1. 定义我们自己的、用于正则表达式匹配的源
+my_netlify_origin_regex = r"https://.*\.netlify\.app"  # 匹配所有 Netlify 子域名
+
+# 2. 获取原作者配置的普通源列表
+original_allowed_origins = []
+if hasattr(settings, 'ALLOWED_ORIGINS') and isinstance(settings.ALLOWED_ORIGINS, list):
+    original_allowed_origins = settings.ALLOWED_ORIGINS
+
+# 3. 使用 FastAPI 的专用参数，同时应用普通源列表和正则表达式源
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=original_allowed_origins,
+    allow_origin_regex=my_netlify_origin_regex,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # --------------- 全局实例 ---------------
 load_settings()
